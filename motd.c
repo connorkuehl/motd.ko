@@ -7,6 +7,7 @@
 #include <linux/fs.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
+#include <linux/slab.h>
 #include <linux/stat.h>
 #include <linux/spinlock.h>
 
@@ -21,6 +22,17 @@ static struct motd_dev {
 	rwlock_t lock;
 } motd_dev = { 0 };
 
+static void motd_trunc(struct motd_dev *dev)
+{
+	write_lock(&dev->lock);
+
+	kfree(dev->motd);
+	dev->motd = NULL;
+	dev->len = 0;
+
+	write_unlock(&dev->lock);
+}
+
 static int motd_open(struct inode *inode, struct file *filp)
 {
 	struct motd_dev *dev;
@@ -30,6 +42,9 @@ static int motd_open(struct inode *inode, struct file *filp)
 	 * for multiple motd devices is added. */
 	dev = container_of(inode->i_cdev, struct motd_dev, cdev);
 	filp->private_data = dev;
+
+	if ((filp->f_flags & O_ACCMODE) == O_WRONLY)
+		motd_trunc(dev);
 
 	return 0;
 }
