@@ -54,10 +54,82 @@ static int motd_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+static ssize_t motd_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
+{
+	struct motd_dev *dev = filp->private_data;
+	ssize_t ret = 0;
+
+	read_lock(&dev->lock);
+
+	if (*f_pos >= dev->len)
+		goto out;
+	if (*f_pos + count > dev->len)
+		count = dev->len - *f_pos;
+	if(copy_to_user(buf, dev->motd + *f_pos, count)) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	*f_pos += count;
+	ret = count;
+out:
+	read_unlock(&dev->lock);
+	return ret;
+}
+
+static ssize_t motd_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
+{
+	struct motd_dev *dev = filp->private_data;
+	char *new_data = NULL;
+	ssize_t ret = 0;
+
+	write_lock(&dev->lock);
+
+	new_data = kmalloc(count + sizeof(*new_data), GFP_KERNEL);
+	if (!new_data) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	if (copy_from_user(new_data, buf, count)) {
+		ret = -EFAULT;
+		goto free_new_data;
+	}
+
+	// This write requires expanding the buffer.
+	if (*f_pos + count > dev->len) {
+		size_t expand_by = count - (dev->len - *f_pos);
+		size_t new_size = dev->len + expand_by;
+
+		char *bigger_motd = kmalloc(new_size * sizeof(*bigger_motd), GFP_KERNEL);
+		if (!bigger_motd) {
+			ret = -ENOMEM;
+			goto free_new_data;
+		}
+
+		strncpy(bigger_motd, dev->motd, dev->len);
+		kfree(dev->motd);
+		dev->motd = bigger_motd;
+	}
+
+	strncpy(dev->motd + *f_pos, new_data, count);
+	dev->len += count;
+	*f_pos += count;
+	ret = count;
+
+free_new_data:
+	kfree(new_data);
+out:
+	write_unlock(&dev->lock);
+	return ret;
+}
+
 static struct file_operations motd_fops = {
 	.owner = THIS_MODULE,
 	.open = motd_open,
 	.release = motd_release,
+	.read = motd_read,
+	.write = motd_write,
 };
 
 static int __init motd_init(void)
