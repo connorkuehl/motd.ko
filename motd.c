@@ -11,8 +11,6 @@
 static int motd_major = 0;
 module_param(motd_major, int, S_IRUGO);
 
-static int motd_minor = 0;
-module_param(motd_minor, int, S_IRUGO);
 
 static int __init motd_init(void)
 {
@@ -20,10 +18,10 @@ static int __init motd_init(void)
 	dev_t dev;
 
 	if (motd_major) {
-		dev = MKDEV(motd_major, motd_minor);
+		dev = MKDEV(motd_major, MOTD_MINOR);
 		result = register_chrdev_region(dev, MOTD_NDEVS, MOTD_NAME);
 	} else {
-		result = alloc_chrdev_region(&dev, motd_minor, MOTD_NDEVS, MOTD_NAME);
+		result = alloc_chrdev_region(&dev, MOTD_MINOR, MOTD_NDEVS, MOTD_NAME);
 		motd_major = MAJOR(dev);
 	}
 
@@ -36,7 +34,7 @@ static int __init motd_init(void)
 
 static void __exit motd_exit(void)
 {
-	dev_t dev = MKDEV(motd_major, motd_minor);
+	dev_t dev = MKDEV(motd_major, MOTD_MINOR);
 
 	unregister_chrdev_region(dev, MOTD_NDEVS);
 }
