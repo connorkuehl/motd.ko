@@ -34,11 +34,13 @@ static int __init motd_init(void)
 
 	if (result < 0) {
 		printk(KERN_WARNING MOTD_NAME ": can't get major %d\n", motd_major);
+		goto out;
 	}
 
 	rwlock_init(&motd_dev.lock);
 
-	return 0;
+out:
+	return result;
 }
 
 static void __exit motd_exit(void)
