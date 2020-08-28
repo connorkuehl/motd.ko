@@ -54,7 +54,7 @@ static int motd_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-loff_t motd_llseek(struct file *filp, loff_t off, int whence)
+static loff_t motd_llseek(struct file *filp, loff_t off, int whence)
 {
 	struct motd_dev *dev = filp->private_data;
 	loff_t new_pos;
