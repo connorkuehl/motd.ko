@@ -54,6 +54,38 @@ static int motd_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+loff_t motd_llseek(struct file *filp, loff_t off, int whence)
+{
+	struct motd_dev *dev = filp->private_data;
+	loff_t new_pos;
+	loff_t ret = -EINVAL;
+
+	read_lock(&dev->lock);
+
+	switch (whence) {
+	case SEEK_SET:
+		new_pos = off;
+		break;
+	case SEEK_CUR:
+		new_pos = filp->f_pos + off;
+		break;
+	case SEEK_END:
+		new_pos = dev->len;
+		break;
+	default:
+		goto out;
+	}
+
+	if (new_pos < 0)
+		goto out;
+
+	filp->f_pos = new_pos;
+	ret = new_pos;
+out:
+	read_unlock(&dev->lock);
+	return ret;
+}
+
 static ssize_t motd_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
 	struct motd_dev *dev = filp->private_data;
@@ -128,6 +160,7 @@ static struct file_operations motd_fops = {
 	.owner = THIS_MODULE,
 	.open = motd_open,
 	.release = motd_release,
+	.llseek = motd_llseek,
 	.read = motd_read,
 	.write = motd_write,
 };
