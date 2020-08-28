@@ -203,6 +203,8 @@ static void __exit motd_exit(void)
 {
 	dev_t dev = MKDEV(motd_major, MOTD_MINOR);
 
+	motd_trunc(&motd_dev);
+
 	cdev_del(&motd_dev.cdev);
 	unregister_chrdev_region(dev, MOTD_NDEVS);
 }
