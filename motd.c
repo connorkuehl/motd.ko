@@ -7,10 +7,17 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/stat.h>
+#include <linux/spinlock.h>
 
 static int motd_major = 0;
 module_param(motd_major, int, S_IRUGO);
 
+static struct motd_dev {
+	char *motd;
+	size_t len;
+
+	rwlock_t lock;
+} motd_dev = { 0 };
 
 static int __init motd_init(void)
 {
@@ -28,6 +35,8 @@ static int __init motd_init(void)
 	if (result < 0) {
 		printk(KERN_WARNING MOTD_NAME ": can't get major %d\n", motd_major);
 	}
+
+	rwlock_init(&motd_dev.lock);
 
 	return 0;
 }
