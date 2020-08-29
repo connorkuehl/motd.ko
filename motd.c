@@ -117,7 +117,7 @@ static ssize_t motd_write(struct file *filp, const char __user *buf, size_t coun
 
 	write_lock(&dev->lock);
 
-	new_data = kmalloc(count + sizeof(*new_data), GFP_KERNEL);
+	new_data = kmalloc(count * sizeof(*new_data), GFP_KERNEL);
 	if (!new_data) {
 		ret = -ENOMEM;
 		goto out;
